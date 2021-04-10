@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+
 func main() {
 	log.Printf("executing fair billing...")
 
@@ -55,7 +56,7 @@ func ValidateRecords(rec string) bool {
 	}
 
 	//3. Name should not be empty
-	if len(recArr[1]) < 1 {
+	if len(strings.TrimSpace(recArr[1])) < 1 {
 		log.Printf("error: name - %s", recArr[1])
 		return false
 	}
@@ -120,8 +121,8 @@ func ComputeUserSessions(logs []string) map[string]SessionOutput {
 		userSessionCache  map[string][]*SessionInfo
 	)
 
-	earliestTime = getEarliestTime(logs)
-	latestTime = getLatestTime(logs)
+	earliestTime = GetEarliestTime(logs)
+	latestTime = GetLatestTime(logs)
 
 	userSessionCache = make(map[string][]*SessionInfo)
 
@@ -134,7 +135,7 @@ func ComputeUserSessions(logs []string) map[string]SessionOutput {
 
 		sessionInfoIns := new(SessionInfo)
 		if val, ok := userSessionCache[logInsArr[1]]; ok {
-			newComputedSession := mapExistingSessionsForUser(val, logInsArr, earliestTime, latestTime)
+			newComputedSession := MapExistingSessionsForUser(val, logInsArr, earliestTime)
 			userSessionCache[logInsArr[1]] = newComputedSession
 			continue
 		}
@@ -159,6 +160,11 @@ func ComputeUserSessions(logs []string) map[string]SessionOutput {
 	for key, val := range userSessionCache {
 		var totalTimeSpent float64
 		for i := range val {
+			if val[i].EndTime == nil {
+				val[i].EndTime = latestTime
+				val[i].ComputeTimeSpent()
+			}
+
 			totalTimeSpent += val[i].TimeSpent
 		}
 
@@ -173,7 +179,7 @@ func ComputeUserSessions(logs []string) map[string]SessionOutput {
 }
 
 //earliest time is the first record of the file
-func getEarliestTime(logs []string) *string {
+func GetEarliestTime(logs []string) *string {
 	if len(logs) < 1 {
 		return nil
 	}
@@ -183,7 +189,7 @@ func getEarliestTime(logs []string) *string {
 }
 
 //latest time would be the last record of the log file
-func getLatestTime(logs []string) *string {
+func GetLatestTime(logs []string) *string {
 	if len(logs) < 1 {
 		return nil
 	}
@@ -192,7 +198,7 @@ func getLatestTime(logs []string) *string {
 	return &logInsArr[0]
 }
 
-func mapExistingSessionsForUser(sessions []*SessionInfo, log []string, earliestTime, latestTime *string) []*SessionInfo {
+func MapExistingSessionsForUser(sessions []*SessionInfo, log []string, earliestTime *string) []*SessionInfo {
 	for i := range sessions {
 		if sessions[i].IsComplete {
 			continue
